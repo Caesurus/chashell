@@ -52,7 +52,7 @@ func poll(stream dnsStream) {
 
 	if len(answers) > 0 {
 		packetData := strings.Join(answers, "")
-		if packetData == "-" {
+		if packetData == "" {
 			return
 		}
 		output, complete := Decode(packetData, stream.encryptionKey)

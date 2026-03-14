@@ -22,7 +22,7 @@ func interact(sessionID string) {
 		if scanner.Text() == "background" {
 			return
 		}
-		initPacket, dataPackets := transport.Encode([]byte(scanner.Text()+"\n"), false, encryptionKey, targetDomain, nil)
+			initPacket, dataPackets := transport.Encode([]byte(scanner.Text()+"\n"), true, encryptionKey, targetDomain, nil)
 		_, valid := packetQueue[sessionID]
 		if !valid {
 			packetQueue[sessionID] = make([]string, 0)

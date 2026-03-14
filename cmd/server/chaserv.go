@@ -67,16 +67,24 @@ func (ci *clientInfo) getChunk(chunkID int32) connData {
 func parseQuery(m *dns.Msg) {
 	for _, q := range m.Question {
 		switch q.Qtype {
-		// Make sure the request is a CNAME question.
-		case dns.TypeCNAME:
-			// Strip the target domain and every dots.
-			dataPacket := strings.Replace(strings.Replace(q.Name, targetDomain, "", -1), ".", "", -1)
+		// Accept CNAME queries (preferred) and A/AAAA queries (some resolvers never ask for CNAME directly).
+		case dns.TypeCNAME, dns.TypeA, dns.TypeAAAA:
+			// Strip the target domain and dots to recover the hex payload.
+			zone := dns.Fqdn(targetDomain)
+			trimmed := strings.TrimSuffix(q.Name, zone)
+			trimmed = strings.TrimSuffix(trimmed, ".")
+			dataPacket := strings.ReplaceAll(trimmed, ".", "")
 
 			// Hex-decode the packet.
 			dataPacketRaw, err := hex.DecodeString(dataPacket)
 
 			if err != nil {
 				fmt.Printf("Unable to decode data packet : %s", dataPacket)
+			}
+
+			// Check if the packet is big enough to fit the nonce.
+			if len(dataPacketRaw) <= 24 {
+				break
 			}
 
 			// Attempt to decrypt and authenticate the packet.
@@ -93,8 +101,8 @@ func parseQuery(m *dns.Msg) {
 				log.Fatalln("Failed to parse message packet:", err)
 			}
 
-			// Generic answer.
-			answer := "-"
+			// Optional answer (empty means "no data").
+			answer := ""
 
 			// Hex-encode the clientGUID to make it printable.
 			clientGUID := hex.EncodeToString(message.Clientguid)
@@ -197,9 +205,12 @@ func parseQuery(m *dns.Msg) {
 			// Unlock the mutex.
 			session.mutex.Unlock()
 
-			//rr, _ := dns.NewRR(fmt.Sprintf("%s TXT %s", q.Name, answer))
-			rr, _ := dns.NewRR(fmt.Sprintf("%s CNAME %s", q.Name, answer))
-			m.Answer = append(m.Answer, rr)
+			if answer != "" {
+				rr, rrErr := dns.NewRR(fmt.Sprintf("%s CNAME %s", q.Name, dns.Fqdn(answer)))
+				if rrErr == nil {
+					m.Answer = append(m.Answer, rr)
+				}
+			}
 
 		}
 
@@ -222,9 +233,9 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 func main() {
 
-	go func() {
-		// attach request handler func
-		dns.HandleFunc(targetDomain, handleDNSRequest)
+		go func() {
+			// attach request handler func
+			dns.HandleFunc(dns.Fqdn(targetDomain), handleDNSRequest)
 
 		// start server
 		port := 53
