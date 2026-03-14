@@ -2,7 +2,7 @@
 SERVER_SOURCE=./cmd/server
 CLIENT_SOURCE=./cmd/shell
 LDFLAGS="-X main.targetDomain=$(DOMAIN_NAME) -X main.encryptionKey=$(ENCRYPTION_KEY) -s -w"
-GCFLAGS="all=-trimpath=$GOPATH"
+GCFLAGS="all=-trimpath=$$GOPATH"
 
 CLIENT_BINARY=chashell
 SERVER_BINARY=chaserv
@@ -24,7 +24,7 @@ ifndef ENCRYPTION_KEY
 endif
 
 build: check-env ## Build for the current architecture.
-	dep ensure && \
+	mkdir -p release && \
 	go build -ldflags $(LDFLAGS) -gcflags $(GCFLAGS) -tags $(TAGS) -o release/$(CLIENT_BINARY) $(CLIENT_SOURCE) && \
 	go build -ldflags $(LDFLAGS) -gcflags $(GCFLAGS) -tags $(TAGS) -o release/$(SERVER_BINARY) $(SERVER_SOURCE)
 
@@ -34,12 +34,12 @@ dep: check-env ## Get all the required dependencies
 
 build-client: check-env ## Build the chashell client.
 	@echo "Building shell"
-	dep ensure && \
+	mkdir -p release && \
 	gox -osarch=$(OSARCH) -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -tags $(TAGS) -output "release/chashell_{{.OS}}_{{.Arch}}" ./cmd/shell
 
 build-server: check-env ## Build the chashell server.
 	@echo "Building server"
-	dep ensure && \
+	mkdir -p release && \
 	gox -osarch=$(OSARCH) -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -tags $(TAGS) -output "release/chaserv_{{.OS}}_{{.Arch}}" ./cmd/server
 
 
