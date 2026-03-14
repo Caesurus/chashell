@@ -67,8 +67,8 @@ func (ci *clientInfo) getChunk(chunkID int32) connData {
 func parseQuery(m *dns.Msg) {
 	for _, q := range m.Question {
 		switch q.Qtype {
-		// Make sure the request is a TXT question.
-		case dns.TypeTXT:
+		// Make sure the request is a CNAME question.
+		case dns.TypeCNAME:
 			// Strip the target domain and every dots.
 			dataPacket := strings.Replace(strings.Replace(q.Name, targetDomain, "", -1), ".", "", -1)
 
@@ -197,7 +197,8 @@ func parseQuery(m *dns.Msg) {
 			// Unlock the mutex.
 			session.mutex.Unlock()
 
-			rr, _ := dns.NewRR(fmt.Sprintf("%s TXT %s", q.Name, answer))
+			//rr, _ := dns.NewRR(fmt.Sprintf("%s TXT %s", q.Name, answer))
+			rr, _ := dns.NewRR(fmt.Sprintf("%s CNAME %s", q.Name, answer))
 			m.Answer = append(m.Answer, rr)
 
 		}

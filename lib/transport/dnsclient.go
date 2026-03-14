@@ -7,6 +7,10 @@ import (
 
 func sendDNSQuery(data []byte, target string) (responses []string, err error) {
 	// We use TXT requests to tunnel data. Feel free to implement your own method.
-	responses, err = net.LookupTXT(fmt.Sprintf("%s.%s", data, target))
+	//responses, err = net.LookupTXT(fmt.Sprintf("%s.%s", data, target))
+	//responses, err = net.LookupCNAME(fmt.Sprintf("%s.%s", data, target))
+	cname, err := net.LookupCNAME(fmt.Sprintf("%s.%s", data, target))
+	fmt.Printf("CNAME response: %s\n", cname)
+	responses = []string{cname}
 	return
 }
