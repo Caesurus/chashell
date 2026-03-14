@@ -46,7 +46,7 @@ Build all the binaries (adjust the domain_name and the encryption_key to your ne
 
 
 ```
-$ export ENCRYPTION_KEY=$(python -c 'from os import urandom; print(urandom(32).encode("hex"))')
+$ export ENCRYPTION_KEY=$(python3 -c 'import os,binascii; print(binascii.hexlify(os.urandom(32)).decode())')
 $ export DOMAIN_NAME=c.sysdream.com
 $ make build-all
 ```

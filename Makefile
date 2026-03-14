@@ -8,7 +8,7 @@ CLIENT_BINARY=chashell
 SERVER_BINARY=chaserv
 TAGS=release
 
-OSARCH = "linux/amd64 linux/386 linux/arm windows/amd64 windows/386 darwin/amd64 darwin/386"
+OSARCH ?= linux/amd64 linux/386 linux/arm windows/amd64 windows/386 darwin/amd64 darwin/arm64
 
 .DEFAULT: help
 
@@ -28,19 +28,30 @@ build: check-env ## Build for the current architecture.
 	go build -ldflags $(LDFLAGS) -gcflags $(GCFLAGS) -tags $(TAGS) -o release/$(CLIENT_BINARY) $(CLIENT_SOURCE) && \
 	go build -ldflags $(LDFLAGS) -gcflags $(GCFLAGS) -tags $(TAGS) -o release/$(SERVER_BINARY) $(SERVER_SOURCE)
 
-dep: check-env ## Get all the required dependencies
-	go get -v -u github.com/golang/dep/cmd/dep && \
-	go get github.com/mitchellh/gox
+deps: ## Download Go module dependencies
+	go mod download
+
+dep: deps ## Backwards-compatible alias
 
 build-client: check-env ## Build the chashell client.
 	@echo "Building shell"
 	mkdir -p release && \
-	gox -osarch=$(OSARCH) -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -tags $(TAGS) -output "release/chashell_{{.OS}}_{{.Arch}}" ./cmd/shell
+	for osarch in $(OSARCH); do \
+		os=$${osarch%/*}; arch=$${osarch#*/}; \
+		ext=""; [ "$$os" = "windows" ] && ext=".exe"; \
+		echo "  -> $$os/$$arch"; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags $(LDFLAGS) -gcflags $(GCFLAGS) -tags $(TAGS) -o "release/chashell_$${os}_$${arch}$${ext}" $(CLIENT_SOURCE) || exit $$?; \
+	done
 
 build-server: check-env ## Build the chashell server.
 	@echo "Building server"
 	mkdir -p release && \
-	gox -osarch=$(OSARCH) -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -tags $(TAGS) -output "release/chaserv_{{.OS}}_{{.Arch}}" ./cmd/server
+	for osarch in $(OSARCH); do \
+		os=$${osarch%/*}; arch=$${osarch#*/}; \
+		ext=""; [ "$$os" = "windows" ] && ext=".exe"; \
+		echo "  -> $$os/$$arch"; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags $(LDFLAGS) -gcflags $(GCFLAGS) -tags $(TAGS) -o "release/chaserv_$${os}_$${arch}$${ext}" $(SERVER_SOURCE) || exit $$?; \
+	done
 
 
 build-all: check-env build-client build-server ## Build everything.
