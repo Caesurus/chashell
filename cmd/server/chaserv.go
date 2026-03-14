@@ -64,22 +64,43 @@ func (ci *clientInfo) getChunk(chunkID int32) connData {
 
 }
 
+func extractHexPayload(qname string) (string, bool) {
+	zone := dns.Fqdn(targetDomain)
+	lowerQ := strings.ToLower(qname)
+	lowerZone := strings.ToLower(zone)
+
+	if !strings.HasSuffix(lowerQ, lowerZone) {
+		return "", false
+	}
+
+	trimmed := qname[:len(qname)-len(zone)]
+	trimmed = strings.TrimSuffix(trimmed, ".")
+	if trimmed == "" {
+		return "", false
+	}
+
+	// Payload is hex, but DNS labels may be case-randomized by resolvers (0x20 encoding).
+	payload := strings.ToLower(strings.ReplaceAll(trimmed, ".", ""))
+	return payload, payload != ""
+}
+
 func parseQuery(m *dns.Msg) {
 	for _, q := range m.Question {
 		switch q.Qtype {
 		// Accept CNAME queries (preferred) and A/AAAA queries (some resolvers never ask for CNAME directly).
 		case dns.TypeCNAME, dns.TypeA, dns.TypeAAAA:
-			// Strip the target domain and dots to recover the hex payload.
-			zone := dns.Fqdn(targetDomain)
-			trimmed := strings.TrimSuffix(q.Name, zone)
-			trimmed = strings.TrimSuffix(trimmed, ".")
-			dataPacket := strings.ReplaceAll(trimmed, ".", "")
+			// Strip the target zone and dots to recover the hex payload.
+			dataPacket, ok := extractHexPayload(q.Name)
+			if !ok {
+				break
+			}
 
 			// Hex-decode the packet.
 			dataPacketRaw, err := hex.DecodeString(dataPacket)
 
 			if err != nil {
-				fmt.Printf("Unable to decode data packet : %s", dataPacket)
+				fmt.Printf("Unable to decode data packet : %s\n", dataPacket)
+				break
 			}
 
 			// Check if the packet is big enough to fit the nonce.
