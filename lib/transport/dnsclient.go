@@ -2,8 +2,8 @@ package transport
 
 import (
 	"fmt"
-	"chashell/lib/logging"
 	"github.com/miekg/dns"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -33,19 +33,19 @@ func sendDNSQuery(data []byte, target string) (responses []string, err error) {
 	msg.SetQuestion(qname, dns.TypeCNAME)
 
 	if dnsTrace {
-		logging.Printf("dns tx qname=%q qtype=CNAME", qname)
+		log.Printf("dns tx qname=%q qtype=CNAME", qname)
 	}
 
 	in, _, err := client.Exchange(msg, net.JoinHostPort(cfg.Servers[0], cfg.Port))
 	if err != nil {
 		if dnsTrace {
-			logging.Printf("dns rx error qname=%q err=%v", qname, err)
+			log.Printf("dns rx error qname=%q err=%v", qname, err)
 		}
 		return nil, err
 	}
 
 	if dnsTrace {
-		logging.Printf("dns rx qname=%q rcode=%s answers=%d", qname, dns.RcodeToString[in.Rcode], len(in.Answer))
+		log.Printf("dns rx qname=%q rcode=%s answers=%d", qname, dns.RcodeToString[in.Rcode], len(in.Answer))
 	}
 
 	for _, rr := range in.Answer {
@@ -55,7 +55,7 @@ func sendDNSQuery(data []byte, target string) (responses []string, err error) {
 		}
 		payload := strings.ReplaceAll(strings.TrimSuffix(cname.Target, "."), ".", "")
 		if dnsTrace {
-			logging.Printf("dns rx cname target=%q payload_len=%d", cname.Target, len(payload))
+			log.Printf("dns rx cname target=%q payload_len=%d", cname.Target, len(payload))
 		}
 		if payload == "" {
 			continue

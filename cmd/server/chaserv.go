@@ -101,7 +101,7 @@ func parseQuery(m *dns.Msg) {
 				if qtype == "" {
 					qtype = fmt.Sprintf("%d", q.Qtype)
 				}
-				logging.Printf("dns rx qtype=%s qname=%q payload_len=%d", qtype, q.Name, len(dataPacket))
+				log.Printf("dns rx qtype=%s qname=%q payload_len=%d", qtype, q.Name, len(dataPacket))
 			}
 
 			// Hex-decode the packet.
@@ -237,7 +237,7 @@ func parseQuery(m *dns.Msg) {
 
 			if answer != "" {
 				if dnsTrace {
-					logging.Printf("dns tx qname=%q cname_payload_len=%d", q.Name, len(answer))
+					log.Printf("dns tx qname=%q cname_payload_len=%d", q.Name, len(answer))
 				}
 				rr, rrErr := dns.NewRR(fmt.Sprintf("%s CNAME %s", q.Name, dns.Fqdn(answer)))
 				if rrErr == nil {
