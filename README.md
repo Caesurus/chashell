@@ -1,5 +1,7 @@
 # Chashell
 
+Forked from [sysdream/chashell](https://github.com/sysdream/chashell). The orginal uses TXT record queries. This implementation attempts the same with CNAME records. The codebase has also been brought up to date to work with more modern `golang` versions. There is still an issue generating the MacOS binaries and I have not looked at fixing this.
+
 ## Reverse Shell over DNS
 
 Chashell is a [Go](https://golang.org/) reverse shell that communicates over DNS. 
