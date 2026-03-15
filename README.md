@@ -129,6 +129,7 @@ cmd.Run()
 ## Debugging
 
 For more verbose messages, add `TAGS=debug` at the end of the make command.
+To trace DNS TX/RX packets, also set `CHASHELL_DNS_TRACE=1` in the environment.
 
 ## To Do
 

@@ -27,6 +27,8 @@ var (
 	encryptionKey string
 )
 
+var dnsTrace = os.Getenv("CHASHELL_DNS_TRACE") != ""
+
 // Store the data from clients received when not the active session.
 var consoleBuffer = map[string]*bytes.Buffer{}
 
@@ -93,6 +95,13 @@ func parseQuery(m *dns.Msg) {
 			dataPacket, ok := extractHexPayload(q.Name)
 			if !ok {
 				break
+			}
+			if dnsTrace {
+				qtype := dns.TypeToString[q.Qtype]
+				if qtype == "" {
+					qtype = fmt.Sprintf("%d", q.Qtype)
+				}
+				logging.Printf("dns rx qtype=%s qname=%q payload_len=%d", qtype, q.Name, len(dataPacket))
 			}
 
 			// Hex-decode the packet.
@@ -227,6 +236,9 @@ func parseQuery(m *dns.Msg) {
 			session.mutex.Unlock()
 
 			if answer != "" {
+				if dnsTrace {
+					logging.Printf("dns tx qname=%q cname_payload_len=%d", q.Name, len(answer))
+				}
 				rr, rrErr := dns.NewRR(fmt.Sprintf("%s CNAME %s", q.Name, dns.Fqdn(answer)))
 				if rrErr == nil {
 					m.Answer = append(m.Answer, rr)
