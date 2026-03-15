@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"chashell/lib/transport"
 	"fmt"
 	"github.com/c-bata/go-prompt"
@@ -9,32 +8,15 @@ import (
 	"strings"
 )
 
-func interact(sessionID string) {
-	buffer, dataAvailable := consoleBuffer[sessionID]
-	if dataAvailable && buffer.Len() > 0 {
-		fmt.Println(buffer.String())
+func queueCommandForSession(sessionID, command string) {
+	initPacket, dataPackets := transport.Encode([]byte(command+"\n"), true, encryptionKey, targetDomain, nil)
+	_, valid := packetQueue[sessionID]
+	if !valid {
+		packetQueue[sessionID] = make([]string, 0)
 	}
-	delete(consoleBuffer, sessionID)
-
-	currentSession = sessionID
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		if scanner.Text() == "background" {
-			return
-		}
-			initPacket, dataPackets := transport.Encode([]byte(scanner.Text()+"\n"), true, encryptionKey, targetDomain, nil)
-		_, valid := packetQueue[sessionID]
-		if !valid {
-			packetQueue[sessionID] = make([]string, 0)
-		}
-		packetQueue[sessionID] = append(packetQueue[sessionID], initPacket)
-		for _, packet := range dataPackets {
-			packetQueue[sessionID] = append(packetQueue[sessionID], packet)
-		}
-
-	}
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+	packetQueue[sessionID] = append(packetQueue[sessionID], initPacket)
+	for _, packet := range dataPackets {
+		packetQueue[sessionID] = append(packetQueue[sessionID], packet)
 	}
 }
 
@@ -53,6 +35,17 @@ func Completer(d prompt.Document) []prompt.Suggest {
 }
 
 func argumentsCompleter(args []string) []prompt.Suggest {
+	// When interacting with a session, only basic controls are available.
+	if currentSession != "" {
+		return prompt.FilterHasPrefix(
+			[]prompt.Suggest{
+				{Text: "background", Description: "Return to main prompt"},
+			},
+			args[len(args)-1],
+			true,
+		)
+	}
+
 	if len(args) <= 1 {
 		return prompt.FilterHasPrefix(commands, args[0], true)
 	}
@@ -75,6 +68,23 @@ func argumentsCompleter(args []string) []prompt.Suggest {
 }
 
 func executor(in string) {
+	in = strings.TrimSpace(in)
+	if in == "" {
+		return
+	}
+
+	// If we are currently interacting with a session, all input except
+	// the local "background" control is forwarded to the remote shell.
+	if currentSession != "" {
+		if in == "background" {
+			fmt.Println("Returning to main prompt.")
+			currentSession = ""
+			return
+		}
+		queueCommandForSession(currentSession, in)
+		return
+	}
+
 	args := strings.Split(in, " ")
 	if len(args) > 0 {
 		switch args[0] {
@@ -83,8 +93,17 @@ func executor(in string) {
 			os.Exit(0)
 		case "sessions":
 			if len(args) == 2 {
-				fmt.Printf("Interacting with session %s.\n", args[1])
-				interact(args[1])
+				sessionID := args[1]
+				fmt.Printf("Interacting with session %s.\n", sessionID)
+
+				// Print any buffered data we have for this session and clear it.
+				buffer, dataAvailable := consoleBuffer[sessionID]
+				if dataAvailable && buffer.Len() > 0 {
+					fmt.Println(buffer.String())
+				}
+				delete(consoleBuffer, sessionID)
+
+				currentSession = sessionID
 			} else {
 				fmt.Println("sessions [id]")
 			}

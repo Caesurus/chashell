@@ -8,8 +8,12 @@ import (
 	"chashell/lib/splitting"
 	"encoding/hex"
 	"github.com/golang/protobuf/proto"
+	"log"
+	"os"
 	"strings"
 )
+
+var decodeTrace = os.Getenv("CHASHELL_DECODE_TRACE") != ""
 
 // ChunkMap should contains the chunk identifier, the chunk number, and the data associated.
 var ChunkMap = map[int32]map[int32]string{}
@@ -41,6 +45,9 @@ func Decode(payload string, encryptionKey string) (output []byte, complete bool)
 		logging.Println("Received invalid/corrupted packet.\n")
 		return
 	}
+	if decodeTrace {
+		log.Printf("output %v", output)
+	}
 
 	// Parse the "Message" part of the Protocol buffer packet.
 	message := &protocol.Message{}
@@ -53,11 +60,17 @@ func Decode(payload string, encryptionKey string) (output []byte, complete bool)
 	// Process the message depending of his type.
 	switch u := message.Packet.(type) {
 	case *protocol.Message_Chunkstart:
+		if decodeTrace {
+			log.Printf("decode chunkstart chunk_id=%d chunk_size=%d", u.Chunkstart.Chunkid, u.Chunkstart.Chunksize)
+		}
 		// A chunkstart packet indicate that we need to allocate memory to receive data.
 		Sessions[u.Chunkstart.Chunkid] = *u.Chunkstart
 		ChunkMap[u.Chunkstart.Chunkid] = make(map[int32]string)
 
 	case *protocol.Message_Chunkdata:
+		if decodeTrace {
+			log.Printf("decode chunkdata chunk_id=%d chunk_num=%d data_len=%d", u.Chunkdata.Chunkid, u.Chunkdata.Chunknum, len(u.Chunkdata.Packet))
+		}
 		// Check if we have a valid session from this Chunkid.
 		_, valid := Sessions[u.Chunkdata.Chunkid]
 
@@ -79,10 +92,13 @@ func Decode(payload string, encryptionKey string) (output []byte, complete bool)
 				delete(ChunkMap, u.Chunkdata.Chunkid)
 				delete(Sessions, u.Chunkdata.Chunkid)
 
-				// Return the complete data.
-				return chunkBuffer.Bytes(), true
+					// Return the complete data.
+					if decodeTrace {
+						log.Printf("decode complete chunk_id=%d output_len=%d", u.Chunkdata.Chunkid, chunkBuffer.Len())
+					}
+					return chunkBuffer.Bytes(), true
+				}
 			}
-		}
 	}
 	return nil, false
 }

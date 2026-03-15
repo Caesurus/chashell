@@ -178,6 +178,7 @@ func parseQuery(m *dns.Msg) {
 
 				if valid && len(queue) > 0 {
 					answer = queue[0]
+
 					// Store answer in cache for DNS servers which are sending multiple queries.
 					pollCache[string(dataPacketRaw)] = &pollTemporaryData{lastseen: now.Unix(), data: answer}
 					// Dequeue.
@@ -237,7 +238,7 @@ func parseQuery(m *dns.Msg) {
 
 			if answer != "" {
 				if dnsTrace {
-					log.Printf("dns tx qname=%q cname_payload_len=%d", q.Name, len(answer))
+					fmt.Printf("dns tx qname=%q cname_payload_len=%d", q.Name, len(answer))
 				}
 				rr, rrErr := dns.NewRR(fmt.Sprintf("%s CNAME %s", q.Name, dns.Fqdn(answer)))
 				if rrErr == nil {

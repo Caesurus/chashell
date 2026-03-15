@@ -40,7 +40,7 @@ build-client: check-env ## Build the chashell client.
 		os=$${osarch%/*}; arch=$${osarch#*/}; \
 		ext=""; [ "$$os" = "windows" ] && ext=".exe"; \
 		echo "  -> $$os/$$arch"; \
-		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags $(LDFLAGS) -gcflags $(GCFLAGS) -tags $(TAGS) -o "release/chashell_$${os}_$${arch}$${ext}" $(CLIENT_SOURCE) || exit $$?; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags $(LDFLAGS) -buildvcs=false -gcflags $(GCFLAGS) -tags $(TAGS) -o "release/chashell_$${os}_$${arch}$${ext}" $(CLIENT_SOURCE) || exit $$?; \
 	done
 
 build-server: check-env ## Build the chashell server.
@@ -50,7 +50,7 @@ build-server: check-env ## Build the chashell server.
 		os=$${osarch%/*}; arch=$${osarch#*/}; \
 		ext=""; [ "$$os" = "windows" ] && ext=".exe"; \
 		echo "  -> $$os/$$arch"; \
-		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags $(LDFLAGS) -gcflags $(GCFLAGS) -tags $(TAGS) -o "release/chaserv_$${os}_$${arch}$${ext}" $(SERVER_SOURCE) || exit $$?; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags $(LDFLAGS) -buildvcs=false -gcflags $(GCFLAGS) -tags $(TAGS) -o "release/chaserv_$${os}_$${arch}$${ext}" $(SERVER_SOURCE) || exit $$?; \
 	done
 
 
